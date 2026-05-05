@@ -11,8 +11,8 @@ struct Node {
 
     Node(string n) : name{n} {}
 
-    shared_ptr<Node> next;     // SERVER owns the chain
-    weak_ptr<Node>   weakNext; // CLIENT traverses without ownership
+    shared_ptr<Node> next;     // owning link
+    weak_ptr<Node>   weakNext; // not-owning link
 
     ~Node() { cout << "Node [" << name << "] destructor" << endl; }
 };
@@ -33,16 +33,15 @@ public:
             node->next = make_shared<Node>(names[i]);
             node = node->next;
         }
-        node->next = serverRoot; // close the circle
+        node->next = serverRoot;
 
-        // mirror shared_ptr chain into weak_ptrs for CLIENT
         node = serverRoot;
         for (int i = 0; i < numberOfNodes; i++) {
             node->weakNext = node->next;
             node = node->next;
         }
 
-        clientRoot = serverRoot; // CLIENT holds only a weak_ptr
+        clientRoot = serverRoot;
     }
 
     void SERVER_printLinkedList() {
@@ -87,7 +86,6 @@ public:
         cout << string(33, '-') << "\n";
         if (!serverRoot) return;
 
-        // null each ->next in order so ref-counts drop and destructors fire
         shared_ptr<Node> node = serverRoot->next;
         for (int i = 1; i < numberOfNodes; i++) {
             shared_ptr<Node> tmp = node->next;
@@ -115,13 +113,12 @@ public:
              << (node->weakNext.lock() ? node->weakNext.lock().get() : nullptr)
              << "\n";
 
-        for (int i = 1; i < numberOfNodes; i++) {
+        for (int i = 1; i < numberOfNodes; i++)
             cout << "Yipes! shared_ptr not available\n";
-        }
     }
 
 private:
-    shared_ptr<Node> serverRoot; // SERVER's owning handle
-    weak_ptr<Node>   clientRoot; // CLIENT's non-owning handle
+    shared_ptr<Node> serverRoot;
+    weak_ptr<Node>   clientRoot;
     int numberOfNodes = 0;
 };
